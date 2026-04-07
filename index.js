@@ -1,4 +1,3 @@
-
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -18,6 +17,8 @@ app.use(cors({
 }));
 app.use(express.json());
 let userCollection;
+let requiestBloodCollection;
+
 
 // MONGODB CONNECTION
 const uri = process.env.MONGODB_URI;
@@ -36,7 +37,8 @@ async function run() {
         console.log("✅ Red Pulse connected to MongoDB");
         const db = client.db("red_pulse");
 
-         userCollection = db.collection("users");
+        userCollection = db.collection("users");
+        requiestBloodCollection = db.collection("request_blood");
 
 
     } catch (error) {
@@ -72,8 +74,8 @@ app.post('/users', async (req, res) => {
 app.get('/users', async (req, res) => {
     try {
         if (!userCollection) {
-            return res.status(503).send({ 
-                message: "Database connection not established yet. Please try again in a moment." 
+            return res.status(503).send({
+                message: "Database connection not established yet. Please try again in a moment."
             });
         }
         const users = await userCollection.find({}).toArray();
@@ -82,12 +84,90 @@ app.get('/users', async (req, res) => {
 
     } catch (error) {
         console.error("Error fetching users from MongoDB:", error);
-        res.status(500).send({ 
+        res.status(500).send({
             message: "Internal Server Error: Failed to retrieve users",
-            error: error.message 
+            error: error.message
         });
     }
 });
+
+
+// GET a single user by email
+app.get('/users/:email', async (req, res) => {
+    try {
+        const email = req.params.email;
+        
+        // Assuming your user collection variable is named 'userCollection'
+        const user = await userCollection.findOne({ email: email });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found in database" });
+        }
+
+        res.send(user);
+    } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+    }
+});
+
+
+//  blood requiest apis 
+// POST: Create a new blood request
+app.post('/request-blood', async (req, res) => {
+    try {
+        const requestData = req.body;
+
+        // 1. Basic Validation
+        if (!requestData.requestedBy || !requestData.requestedTo) {
+            return res.status(400).send({ success: false, message: "Missing required emails." });
+        }
+
+        // 2. Prevent self-requests
+        if (requestData.requestedBy === requestData.requestedTo) {
+            return res.status(400).send({ success: false, message: "You cannot request blood from yourself." });
+        }
+
+        // 3. Check if a pending request already exists between these two users
+        // Assuming your collection is named 'bloodRequestsCollection'
+        const existing = await requiestBloodCollection.findOne({
+            requestedBy: requestData.requestedBy,
+            requestedTo: requestData.requestedTo,
+            status: 'pending'
+        });
+
+        if (existing) {
+            return res.status(409).send({ success: false, message: "A pending request already exists for this donor." });
+        }
+
+        // 4. Insert into Database
+        const result = await requiestBloodCollection.insertOne(requestData);
+
+        res.status(201).send({
+            success: true,
+            message: "Request created successfully",
+            insertedId: result.insertedId
+        });
+
+    } catch (error) {
+        console.error("❌ Server Error:", error);
+        res.status(500).send({ success: false, message: "Internal Server Error" });
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
