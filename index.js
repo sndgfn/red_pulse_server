@@ -96,14 +96,10 @@ app.get('/users', async (req, res) => {
 app.get('/users/:email', async (req, res) => {
     try {
         const email = req.params.email;
-        
-        // Assuming your user collection variable is named 'userCollection'
         const user = await userCollection.findOne({ email: email });
-
         if (!user) {
             return res.status(404).json({ message: "User not found in database" });
         }
-
         res.send(user);
     } catch (error) {
         console.error("Error fetching user:", error);
@@ -117,32 +113,21 @@ app.get('/users/:email', async (req, res) => {
 app.post('/request-blood', async (req, res) => {
     try {
         const requestData = req.body;
-
-        // 1. Basic Validation
         if (!requestData.requestedBy || !requestData.requestedTo) {
             return res.status(400).send({ success: false, message: "Missing required emails." });
         }
-
-        // 2. Prevent self-requests
         if (requestData.requestedBy === requestData.requestedTo) {
             return res.status(400).send({ success: false, message: "You cannot request blood from yourself." });
         }
-
-        // 3. Check if a pending request already exists between these two users
-        // Assuming your collection is named 'bloodRequestsCollection'
         const existing = await requiestBloodCollection.findOne({
             requestedBy: requestData.requestedBy,
             requestedTo: requestData.requestedTo,
             status: 'pending'
         });
-
         if (existing) {
             return res.status(409).send({ success: false, message: "A pending request already exists for this donor." });
         }
-
-        // 4. Insert into Database
         const result = await requiestBloodCollection.insertOne(requestData);
-
         res.status(201).send({
             success: true,
             message: "Request created successfully",
@@ -156,6 +141,27 @@ app.post('/request-blood', async (req, res) => {
 });
 
 
+// GET: Fetch all blood requests sent TO a specific user
+app.get('/request-blood/:email', async (req, res) => {
+    try {
+        const email = req.params.email;
+
+        // Use a case-insensitive regex match
+        const query = { requestedTo: { $regex: new RegExp(`^${email}$`, 'i') } };
+        
+        const requests = await requiestBloodCollection
+            .find(query)
+            .toArray();
+
+        if (requests.length === 0) {
+            return res.status(200).json([]); // Better to return empty array than 404 for frontend logic
+        }
+
+        res.status(200).send(requests);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 
 
