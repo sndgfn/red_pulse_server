@@ -106,8 +106,6 @@ app.get('/users/:email', async (req, res) => {
         res.status(500).send({ message: "Internal Server Error" });
     }
 });
-
-
 //  blood requiest apis 
 // POST: Create a new blood request
 app.post('/request-blood', async (req, res) => {
@@ -139,9 +137,6 @@ app.post('/request-blood', async (req, res) => {
         res.status(500).send({ success: false, message: "Internal Server Error" });
     }
 });
-
-
-
 
 // sob ceye jamelar api 
 app.get('/request-blood/:email', async (req, res) => {
@@ -183,7 +178,6 @@ app.put('/request-blood/accept/:id', async (req, res) => {
     if (!ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: 'Invalid Request ID format.' });
     }
-
     const filter = { _id: new ObjectId(id) };
     const updateDoc = {
       $set: {
@@ -191,9 +185,7 @@ app.put('/request-blood/accept/:id', async (req, res) => {
         updatedAt: new Date().toISOString()
       }
     };
-
     const result = await requiestBloodCollection.updateOne(filter, updateDoc);
-
     if (result.matchedCount === 0) {
       return res.status(404).json({ success: false, message: 'Request not found.' });
     }
@@ -212,6 +204,41 @@ app.put('/request-blood/accept/:id', async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 });
+
+
+//location er natok 
+// server/index.js (or wherever your routes are)
+app.patch('/users/location/:uid', async (req, res) => {
+  const { uid } = req.params;
+  const { latitude, longitude } = req.body;
+
+  try {
+    await User.findOneAndUpdate(
+      { uid: uid },
+      { 
+        $set: { 
+          "location.coordinates": [longitude, latitude],
+          "location.type": "Point"
+        } 
+      }
+    );
+    res.status(200).send("Location updated");
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
 
 // TEST ROUTE
 app.get('/', (req, res) => {
