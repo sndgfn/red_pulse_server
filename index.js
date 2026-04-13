@@ -90,8 +90,6 @@ app.get('/users', async (req, res) => {
         });
     }
 });
-
-
 // GET a single user by email
 app.get('/users/:email', async (req, res) => {
     try {
@@ -106,6 +104,62 @@ app.get('/users/:email', async (req, res) => {
         res.status(500).send({ message: "Internal Server Error" });
     }
 });
+
+// 1. PATCH API: Update user role to admin
+app.patch('/users/admin/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+            $set: {
+                role: 'admin'
+            },
+        };
+        const result = await userCollection.updateOne(filter, updateDoc);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(500).send({ message: "Internal Server Error", error });
+    }
+});
+
+app.delete('/users/delete/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid User ID format'
+            });
+        }
+        const query = { _id: new ObjectId(id) };
+        
+        const result = await userCollection.deleteOne(query);
+        if (result.deletedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+                deletedCount: 0
+            });
+        }
+
+        // 4. Success response
+        res.status(200).json({
+            success: true,
+            message: 'User deleted successfully',
+            deletedCount: result.deletedCount
+        });
+
+    } catch (error) {
+        console.error("Backend Delete Error:", error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal Server Error',
+            error: error.message
+        });
+    }
+});
+
+
 //  blood requiest apis 
 // POST: Create a new blood request
 app.post('/request-blood', async (req, res) => {
@@ -144,11 +198,11 @@ app.get('/request-blood/:email', async (req, res) => {
         const email = req.params.email;
         const emailRegex = new RegExp(`^${email}$`, 'i');
 
-       
+
         const query = {
             $or: [
                 { requestedTo: { $regex: emailRegex } },
-                { 
+                {
                     $and: [
                         { requestedBy: { $regex: emailRegex } },
                         { status: "accepted" }
@@ -173,59 +227,59 @@ app.get('/request-blood/:email', async (req, res) => {
 
 app.put('/request-blood/accept/:id', async (req, res) => {
 
-  try {
-    const id = req.params.id;
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: 'Invalid Request ID format.' });
-    }
-    const filter = { _id: new ObjectId(id) };
-    const updateDoc = {
-      $set: {
-        status: 'accepted',
-        updatedAt: new Date().toISOString()
-      }
-    };
-    const result = await requiestBloodCollection.updateOne(filter, updateDoc);
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ success: false, message: 'Request not found.' });
-    }
+    try {
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: 'Invalid Request ID format.' });
+        }
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+            $set: {
+                status: 'accepted',
+                updatedAt: new Date().toISOString()
+            }
+        };
+        const result = await requiestBloodCollection.updateOne(filter, updateDoc);
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ success: false, message: 'Request not found.' });
+        }
 
-    // optional: fetch updated document
-    const updated = await requiestBloodCollection.findOne(filter);
+        // optional: fetch updated document
+        const updated = await requiestBloodCollection.findOne(filter);
 
-    res.status(200).json({
-      success: true,
-      message: 'Blood request accepted successfully!',
-      modifiedCount: result.modifiedCount,
-      request: updated
-    });
-  } catch (error) {
-    console.error('❌ Update Error:', error);
-    res.status(500).json({ success: false, message: 'Internal Server Error' });
-  }
+        res.status(200).json({
+            success: true,
+            message: 'Blood request accepted successfully!',
+            modifiedCount: result.modifiedCount,
+            request: updated
+        });
+    } catch (error) {
+        console.error('❌ Update Error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
 });
 
 
 //location er natok 
 // server/index.js (or wherever your routes are)
 app.patch('/users/location/:uid', async (req, res) => {
-  const { uid } = req.params;
-  const { latitude, longitude } = req.body;
+    const { uid } = req.params;
+    const { latitude, longitude } = req.body;
 
-  try {
-    await User.findOneAndUpdate(
-      { uid: uid },
-      { 
-        $set: { 
-          "location.coordinates": [longitude, latitude],
-          "location.type": "Point"
-        } 
-      }
-    );
-    res.status(200).send("Location updated");
-  } catch (error) {
-    res.status(500).send(error);
-  }
+    try {
+        await User.findOneAndUpdate(
+            { uid: uid },
+            {
+                $set: {
+                    "location.coordinates": [longitude, latitude],
+                    "location.type": "Point"
+                }
+            }
+        );
+        res.status(200).send("Location updated");
+    } catch (error) {
+        res.status(500).send(error);
+    }
 });
 
 
