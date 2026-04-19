@@ -302,7 +302,7 @@ app.get('/', (req, res) => {
 // START SERVER
 app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Server  sitting  on http://192.168.0.102:${port}`);
-    console.log(`🚀 Server  sitting  on http://192.168.0.102:${port}`);
+    // console.log(`🚀 Server  sitting  on http://192.168.0.102:${port}`);
 });
 //test github
 
